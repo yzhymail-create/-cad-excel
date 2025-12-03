@@ -1,39 +1,35 @@
-# -cad-excel
+' -cad-excel
 Option Explicit
 
 ' ================================================================
 ' ExportTableCells_ByIntersections_ToExcel
-' - 查找块名以 "TABLEOUTLINE_" 开头的块参照（BlockReference）
-' - 在每个块的 bbox 内收集线段（Line / LWPolyline / Polyline segments）
-' - 计算线段相交点（线段-线段相交）
-' - 聚类 X/Y，按相邻 X 对、相邻 Y 对检测“单位格”（四个交点均存在）
-' - 在 Excel 中复刻格子（每个格对应一个 Excel 单元格），并写入：
-'       左下角 (x,y)
-'       右上角 (x,y)
-' 注意：只生成由四个交点明确构成的单位格；暂不合并单元格，不提取文字
+' 步骤：
+' 1) 复刻CAD表格网格（固定10列，首行整行合并为表头），输出各单元格的坐标到Excel
+' 2) 在同一范围内收集普通文字（Text/MText），以插入点坐标将文字归属到单元格，并写入Excel
+' 说明：仅处理普通文字，不处理块属性或标注类文字
 ' ================================================================
 Public Sub ExportTableCells_ByIntersections_ToExcel()
     On Error GoTo ErrHandler
 
     Const BLOCK_PREFIX As String = "TABLEOUTLINE_"
-    Const EPS As Double = 0.0005       ' 坐标判等容差（聚类用）
+    Const EPS As Double = 0.0005
     Const COORD_FMT As String = "0.000000"
-    Const SEL_METHOD As Long = 1       ' 选择方式（1 Crossing 通常可用）
+    Const COLS_EXPECTED As Long = 10
 
     Dim doc As Object: Set doc = ThisDrawing
     Dim ms As Object: Set ms = doc.ModelSpace
 
-    ' --- 收集所有块参照（BlockReference）且名字以 BLOCK_PREFIX 开头 ---
+    ' --- 收集目标块 ---
     Dim blockRefs As Collection: Set blockRefs = New Collection
     Dim ent As Object
     For Each ent In ms
-        If TypeName(ent) Like "*BlockReference*" Or TypeName(ent) Like "*Insert*" Then
+        If IsBlockReference(ent) Then
             Dim bname As String
             bname = ""
             On Error Resume Next
-            If HasProperty(ent, "Name") Then bname = ent.Name
-            If bname = "" And HasProperty(ent, "EffectiveName") Then bname = ent.EffectiveName
-            On Error GoTo 0
+            If HasProperty(ent, "Name") Then bname = CStr(ent.Name)
+            If bname = "" And HasProperty(ent, "EffectiveName") Then bname = CStr(ent.EffectiveName)
+            On Error GoTo ErrHandler
             If UCase$(Left$(Trim$(bname), Len(BLOCK_PREFIX))) = BLOCK_PREFIX Then
                 blockRefs.Add ent
             End If
@@ -46,14 +42,17 @@ Public Sub ExportTableCells_ByIntersections_ToExcel()
     End If
 
     ' 创建 Excel
-    Dim xlApp As Object, xlWb As Object, xlSht As Object
+    Dim xlApp As Object, xlWb As Object, xlSht As Object, xlShtCheck As Object
     Set xlApp = CreateObject("Excel.Application")
     xlApp.Visible = True
     Set xlWb = xlApp.Workbooks.Add
     Set xlSht = xlWb.Worksheets(1)
-    xlSht.Name = "CAD_表格单元坐标"
+    xlSht.Name = "CAD_表格与文字"
+    Set xlShtCheck = xlWb.Worksheets.Add(After:=xlSht)
+    xlShtCheck.Name = "校核_未匹配文字"
 
     Dim outRowOffset As Long: outRowOffset = 1
+    Dim checkRowOffset As Long: checkRowOffset = 1
 
     Dim iBlk As Long
     For iBlk = 1 To blockRefs.Count
@@ -66,17 +65,20 @@ Public Sub ExportTableCells_ByIntersections_ToExcel()
         blkRef.GetBoundingBox bbMin, bbMax
         If Err.Number <> 0 Then
             Err.Clear
+            On Error GoTo ErrHandler
+            xlSht.Cells(outRowOffset, 1).Value = "块 " & iBlk & " 获取包围盒失败，跳过"
+            outRowOffset = outRowOffset + 2
             GoTo NextBlock
         End If
         On Error GoTo ErrHandler
 
-        ' 扩展一点bbox以避免边界数值问题
+        ' 扩展bbox
         Dim margin As Double: margin = 0.5
         Dim selMin(0 To 2) As Double, selMax(0 To 2) As Double
-        selMin(0) = bbMin(0) - margin: selMin(1) = bbMin(1) - margin: selMin(2) = 0
-        selMax(0) = bbMax(0) + margin: selMax(1) = bbMax(1) + margin: selMax(2) = 0
+        selMin(0) = CDbl(bbMin(0)) - margin: selMin(1) = CDbl(bbMin(1)) - margin: selMin(2) = 0
+        selMax(0) = CDbl(bbMax(0)) + margin: selMax(1) = CDbl(bbMax(1)) + margin: selMax(2) = 0
 
-        ' 在 ModelSpace 中收集在 bbox 内的线段实体（线/多段线分段）
+        ' 收集线段（在bbox范围内）
         Dim segs As Collection: Set segs = New Collection
         Dim e As Object
         For Each e In ms
@@ -86,11 +88,10 @@ Public Sub ExportTableCells_ByIntersections_ToExcel()
                 If Not IsEmpty(parts) Then
                     Dim si As Long
                     For si = LBound(parts) To UBound(parts)
-                        Dim x1 As Double: x1 = parts(si)(0)
-                        Dim y1 As Double: y1 = parts(si)(1)
-                        Dim x2 As Double: x2 = parts(si)(2)
-                        Dim y2 As Double: y2 = parts(si)(3)
-                        ' 将段的两个端点都判断是否在 bbox 内（简单筛选）
+                        Dim x1 As Double: x1 = CDbl(parts(si)(0))
+                        Dim y1 As Double: y1 = CDbl(parts(si)(1))
+                        Dim x2 As Double: x2 = CDbl(parts(si)(2))
+                        Dim y2 As Double: y2 = CDbl(parts(si)(3))
                         If SegmentIntersectsBox(x1, y1, x2, y2, selMin, selMax) Then
                             segs.Add Array(x1, y1, x2, y2)
                         End If
@@ -99,14 +100,13 @@ Public Sub ExportTableCells_ByIntersections_ToExcel()
             End If
         Next e
 
-        ' 如果没有足够线段，跳过
         If segs.Count < 2 Then
             xlSht.Cells(outRowOffset, 1).Value = "块 " & iBlk & " 线段不足，跳过"
             outRowOffset = outRowOffset + 2
             GoTo NextBlock
         End If
 
-        ' --- 计算所有线段之间的交点 ---
+        ' 计算交点（仅保留在bbox内）
         Dim pts As Collection: Set pts = New Collection
         Dim a As Long, b As Long
         For a = 1 To segs.Count - 1
@@ -116,35 +116,41 @@ Public Sub ExportTableCells_ByIntersections_ToExcel()
                 Dim ip As Variant
                 ip = SegmentSegmentIntersection(s1(0), s1(1), s1(2), s1(3), s2(0), s2(1), s2(2), s2(3))
                 If Not IsEmpty(ip) Then
-                    AddUniquePoint pts, ip(0), ip(1), EPS
+                    If PointInBox(ip(0), ip(1), selMin, selMax) Then
+                        AddUniquePoint pts, CDbl(ip(0)), CDbl(ip(1)), EPS
+                    End If
                 End If
             Next b
         Next a
 
-        ' 如果交点太少，跳过
         If pts.Count < 4 Then
             xlSht.Cells(outRowOffset, 1).Value = "块 " & iBlk & " 交点少于4，跳过"
             outRowOffset = outRowOffset + 2
             GoTo NextBlock
         End If
 
-        ' --- 聚类 X 和 Y（去重、排序）
+        ' 聚类 X/Y
         Dim xs As Variant, ys As Variant
-        xs = UniqueSortedCoordsFromPoints(pts, 0, EPS, True)   ' X 升序
-        ys = UniqueSortedCoordsFromPoints(pts, 1, EPS, False)  ' Y 降序（从上到下）
+        xs = UniqueSortedCoordsFromPoints(pts, 0, EPS, True)   ' X 升序（左->右）
+        ys = UniqueSortedCoordsFromPoints(pts, 1, EPS, False)  ' Y 降序（上->下）
 
-        If (UBound(xs) - LBound(xs) + 1) < 2 Or (UBound(ys) - LBound(ys) + 1) < 2 Then
-            xlSht.Cells(outRowOffset, 1).Value = "块 " & iBlk & " 无法构建网格线，跳过"
-            outRowOffset = outRowOffset + 2
-            GoTo NextBlock
+        Dim nCols As Long, nRows As Long
+        nCols = UBound(xs) - LBound(xs)
+        nRows = UBound(ys) - LBound(ys)
+
+        ' 规范校核：固定列数必须为 10
+        Dim isColsOk As Boolean: isColsOk = (nCols = COLS_EXPECTED)
+        Dim note As String
+        note = "块 " & iBlk & " 检测到列数=" & nCols & "，行数=" & nRows & "；规范列应为 " & COLS_EXPECTED
+        If Not isColsOk Then
+            note = note & "（不符合规范，将继续输出并标记为需校核）"
         End If
 
-        Dim nCols As Long: nCols = UBound(xs) - LBound(xs)
-        Dim nRows As Long: nRows = UBound(ys) - LBound(ys)
-
-        ' --- 为每个单位格检查四个角交点是否都存在（用EPS判等）
+        ' 单位格存在性矩阵
         Dim cellExists() As Boolean
-        ReDim cellExists(1 To nRows, 1 To nCols)
+        If nRows >= 1 And nCols >= 1 Then
+            ReDim cellExists(1 To nRows, 1 To nCols)
+        End If
 
         Dim ix As Long, iy As Long
         For iy = 0 To nRows - 1
@@ -153,62 +159,141 @@ Public Sub ExportTableCells_ByIntersections_ToExcel()
                 Dim xR As Double: xR = xs(LBound(xs) + ix + 1)
                 Dim yT As Double: yT = ys(LBound(ys) + iy)
                 Dim yB As Double: yB = ys(LBound(ys) + iy + 1)
-                ' 判断4点是否存在
-                If PointExists(pts, xL, yB, EPS) And _
-                   PointExists(pts, xL, yT, EPS) And _
-                   PointExists(pts, xR, yB, EPS) And _
-                   PointExists(pts, xR, yT, EPS) Then
-                    cellExists(iy + 1, ix + 1) = True
-                Else
-                    cellExists(iy + 1, ix + 1) = False
-                End If
+                cellExists(iy + 1, ix + 1) = PointExists(pts, xL, yB, EPS) And _
+                                             PointExists(pts, xL, yT, EPS) And _
+                                             PointExists(pts, xR, yB, EPS) And _
+                                             PointExists(pts, xR, yT, EPS)
             Next ix
         Next iy
 
-        ' --- 在 Excel 中输出：先写标题，然后按行（上->下）按列（左->右）写单元格坐标，并画边框
+        ' 输出到 Excel：标题与校核信息
         Dim topRow As Long: topRow = outRowOffset
-        xlSht.Cells(topRow, 1).Value = "块 " & iBlk & " 网格 (" & nRows & "x" & nCols & ")，只列出存在的单位格，单元格内容：LeftBottom / RightTop"
+        xlSht.Cells(topRow, 1).Value = note
         topRow = topRow + 1
 
-        ' 写表格区域占位并填入坐标（若 cellExists 则写坐标）
+        ' 构建单元格矩形列表（用于文字归属）
+        Dim cellRects As Collection: Set cellRects = New Collection
+
+        ' 首行强制合并为一个表头（若有足够边界交点）
+        If nRows >= 1 And nCols >= 1 Then
+            Dim XLh As Double: XLh = xs(LBound(xs) + 0)            ' 最左
+            Dim XRh As Double: XRh = xs(LBound(xs) + nCols)        ' 最右
+            Dim YTh As Double: YTh = ys(LBound(ys) + 0)            ' 第一行上边界
+            Dim YBh As Double: YBh = ys(LBound(ys) + 1)            ' 第一行下边界
+
+            Dim headerOK As Boolean
+            headerOK = PointExists(pts, XLh, YBh, EPS) And _
+                       PointExists(pts, XLh, YTh, EPS) And _
+                       PointExists(pts, XRh, YBh, EPS) And _
+                       PointExists(pts, XRh, YTh, EPS)
+
+            ' Excel首行输出与矩形登记
+            Dim rngHeader As Object
+            Set rngHeader = xlSht.Range(xlSht.Cells(topRow + 0, 1), xlSht.Cells(topRow + 0, nCols))
+            If headerOK Then
+                On Error Resume Next
+                rngHeader.Merge
+                On Error GoTo ErrHandler
+                rngHeader.Value = "(" & Format(XLh, COORD_FMT) & ", " & Format(YBh, COORD_FMT) & ")" & vbCrLf & _
+                                  "(" & Format(XRh, COORD_FMT) & ", " & Format(YTh, COORD_FMT) & ")"
+                rngHeader.WrapText = True
+                ' 登记表头矩形：标注其Excel范围
+                cellRects.Add MakeCellRect(XLh, XRh, YBh, YTh, topRow, 1, topRow, nCols)
+            Else
+                xlSht.Cells(topRow, 1).Value = "首行边界交点不足，未合并（需校核）"
+                ' 仍登记矩形但不合并，以便文字归属
+                cellRects.Add MakeCellRect(XLh, XRh, YBh, YTh, topRow, 1, topRow, nCols)
+            End If
+        End If
+
+        ' 第二行到最后一行的单位格输出与矩形登记
         Dim rOut As Long, cOut As Long
-        For rOut = 1 To nRows
+        For rOut = 2 To nRows
             For cOut = 1 To nCols
                 Dim writeRow As Long: writeRow = topRow + rOut - 1
                 Dim writeCol As Long: writeCol = cOut
-                Dim outVal As String
+                Dim XL As Double, XR As Double, YB As Double, YT As Double
+                XL = xs(LBound(xs) + (cOut - 1))
+                XR = xs(LBound(xs) + (cOut - 1) + 1)
+                YT = ys(LBound(ys) + (rOut - 1))
+                YB = ys(LBound(ys) + (rOut - 1) + 1)
+
+                ' 写坐标（存在时写；不存在时留空以校核）
                 If cellExists(rOut, cOut) Then
-                    Dim XL As Double, XR As Double, YB As Double, YT As Double
-                    XL = xs(LBound(xs) + (cOut - 1))
-                    XR = xs(LBound(xs) + (cOut - 1) + 1)
-                    YT = ys(LBound(ys) + (rOut - 1))
-                    YB = ys(LBound(ys) + (rOut - 1) + 1)
-                    outVal = "(" & Format(XL, COORD_FMT) & ", " & Format(YB, COORD_FMT) & ")" & vbCrLf & _
-                             "(" & Format(XR, COORD_FMT) & ", " & Format(YT, COORD_FMT) & ")"
+                    xlSht.Cells(writeRow, writeCol).Value = "(" & Format(XL, COORD_FMT) & ", " & Format(YB, COORD_FMT) & ")" & vbCrLf & _
+                                                            "(" & Format(XR, COORD_FMT) & ", " & Format(YT, COORD_FMT) & ")"
                 Else
-                    outVal = "" ' 不存在单位格则空
+                    xlSht.Cells(writeRow, writeCol).Value = ""
                 End If
-                xlSht.Cells(writeRow, writeCol).Value = outVal
                 xlSht.Cells(writeRow, writeCol).WrapText = True
+
+                ' 登记矩形（不论是否存在四角交点，都用于文字归属）
+                cellRects.Add MakeCellRect(XL, XR, YB, YT, writeRow, writeCol, writeRow, writeCol)
             Next cOut
         Next rOut
 
-        ' 画边框（整个 nRows x nCols 区域）
-        Dim rng As Object
-        Set rng = xlSht.Range(xlSht.Cells(topRow, 1), xlSht.Cells(topRow + nRows - 1, nCols))
-        With rng.Borders
+        ' 绘整体边框
+        Dim rngGrid As Object
+        Set rngGrid = xlSht.Range(xlSht.Cells(topRow, 1), xlSht.Cells(topRow + nRows - 1, nCols))
+        With rngGrid.Borders
             .LineStyle = 1 ' xlContinuous
             .Weight = 2
         End With
 
-        ' 更新 outRowOffset（块之间空 2 行）
+        ' -------- 第二步：收集文字并归属到单元格 --------
+        Dim texts As Collection: Set texts = CollectTextsInBox(ms, selMin, selMax)
+
+        ' 归属文字并写入Excel（同格换行）
+        Dim tIdx As Long
+        Dim unmatched As Collection: Set unmatched = New Collection
+        For tIdx = 1 To texts.Count
+            Dim t As Variant: t = texts(tIdx) ' [x, y, content]
+            Dim tx As Double: tx = t(0)
+            Dim ty As Double: ty = t(1)
+            Dim content As String: content = t(2)
+
+            Dim hitRect As Variant
+            hitRect = FindContainingCell(cellRects, tx, ty, EPS)
+            If IsEmpty(hitRect) Then
+                unmatched.Add t ' 记录未匹配文字
+            Else
+                ' 写入对应的Excel格（追加换行）
+                Dim r1 As Long: r1 = CLng(hitRect(4))
+                Dim c1 As Long: c1 = CLng(hitRect(5))
+                Dim curVal As String: curVal = CStr(xlSht.Cells(r1, c1).Value)
+                If Len(curVal) > 0 Then
+                    xlSht.Cells(r1, c1).Value = curVal & vbCrLf & content
+                Else
+                    xlSht.Cells(r1, c1).Value = content
+                End If
+                xlSht.Cells(r1, c1).WrapText = True
+            End If
+        Next tIdx
+
+        ' 输出未匹配文字到校核页
+        If unmatched.Count > 0 Then
+            xlShtCheck.Cells(checkRowOffset, 1).Value = "块 " & iBlk & " 未匹配文字（坐标与内容）："
+            checkRowOffset = checkRowOffset + 1
+            Dim um As Long
+            For um = 1 To unmatched.Count
+                Dim ut As Variant: ut = unmatched(um)
+                xlShtCheck.Cells(checkRowOffset, 1).Value = Format(CDbl(ut(0)), COORD_FMT)
+                xlShtCheck.Cells(checkRowOffset, 2).Value = Format(CDbl(ut(1)), COORD_FMT)
+                xlShtCheck.Cells(checkRowOffset, 3).Value = CStr(ut(2))
+                checkRowOffset = checkRowOffset + 1
+            Next um
+            checkRowOffset = checkRowOffset + 1
+        End If
+
+        ' 更新 outRowOffset
         outRowOffset = topRow + nRows + 2
 
 NextBlock:
     Next iBlk
 
     xlSht.Columns.AutoFit
-    MsgBox "完成：已把表格单位格（由四个交点定义）写入 Excel。", vbInformation
+    xlShtCheck.Columns.AutoFit
+    MsgBox "完成：已复刻表格并提取文字到 Excel（含校核未匹配文字）。", vbInformation
     Exit Sub
 
 ErrHandler:
@@ -217,17 +302,28 @@ End Sub
 
 ' ----------------------- 帮助函数 -----------------------
 
-' 判断对象是否为线性实体（Line/Polyline/LWPolyline）
+' 块参照判断
+Private Function IsBlockReference(o As Object) As Boolean
+    On Error Resume Next
+    If o Is Nothing Then Exit Function
+    Dim tn As String: tn = TypeName(o)
+    IsBlockReference = (InStr(1, tn, "BlockReference", vbTextCompare) > 0 Or _
+                        InStr(1, tn, "Insert", vbTextCompare) > 0)
+End Function
+
+' 线性实体判断
 Private Function IsLineEntity(o As Object) As Boolean
     On Error Resume Next
     If o Is Nothing Then Exit Function
     Dim tn As String: tn = TypeName(o)
     If InStr(1, tn, "Line", vbTextCompare) > 0 Or InStr(1, tn, "Polyline", vbTextCompare) > 0 Or InStr(1, tn, "LWPolyline", vbTextCompare) > 0 Then
         IsLineEntity = True
+    Else
+        IsLineEntity = False
     End If
 End Function
 
-' 获取实体分段（返回 Array of Array(x1,y1,x2,y2)），兼容 Line / LWPolyline / Polyline
+' 获取线段集合
 Private Function GetEntitySegments(o As Object) As Variant
     On Error Resume Next
     If o Is Nothing Then GetEntitySegments = Empty: Exit Function
@@ -255,10 +351,10 @@ Private Function GetEntitySegments(o As Object) As Variant
             If pairs >= 2 Then
                 ReDim res(0 To pairs - 2)
                 For i = 0 To pairs - 2
-                    Dim x1 As Double: x1 = coords(base + i * 2)
-                    Dim y1 As Double: y1 = coords(base + i * 2 + 1)
-                    Dim x2 As Double: x2 = coords(base + (i + 1) * 2)
-                    Dim y2 As Double: y2 = coords(base + (i + 1) * 2 + 1)
+                    Dim x1 As Double: x1 = CDbl(coords(base + i * 2))
+                    Dim y1 As Double: y1 = CDbl(coords(base + i * 2 + 1))
+                    Dim x2 As Double: x2 = CDbl(coords(base + (i + 1) * 2))
+                    Dim y2 As Double: y2 = CDbl(coords(base + (i + 1) * 2 + 1))
                     res(i) = Array(x1, y1, x2, y2)
                 Next i
                 GetEntitySegments = res
@@ -272,7 +368,7 @@ Private Function GetEntitySegments(o As Object) As Variant
             If nv >= 2 Then
                 ReDim res(0 To nv - 2)
                 For i = 0 To nv - 2
-                    res(i) = Array(verts(i)(0), verts(i)(1), verts(i + 1)(0), verts(i + 1)(1))
+                    res(i) = Array(CDbl(verts(i)(0)), CDbl(verts(i)(1)), CDbl(verts(i + 1)(0)), CDbl(verts(i + 1)(1)))
                 Next i
                 GetEntitySegments = res
                 Exit Function
@@ -283,18 +379,16 @@ Private Function GetEntitySegments(o As Object) As Variant
     GetEntitySegments = Empty
 End Function
 
-' 判断线段是否与 bbox 有交集（用于快速筛选）
+' 段与盒相交（粗筛）
 Private Function SegmentIntersectsBox(x1 As Double, y1 As Double, x2 As Double, y2 As Double, selMin As Variant, selMax As Variant) As Boolean
-    ' 简单判断：若任一端点在 box 内，或段与 box 相交（这里用端点在内或bbox覆盖）
     If PointInBox(x1, y1, selMin, selMax) Or PointInBox(x2, y2, selMin, selMax) Then
         SegmentIntersectsBox = True
         Exit Function
     End If
-    ' 保守：如果段的 bbox 与 box 有重叠，则认为可能交
-    Dim sxmin As Double: sxmin = Application.Min(x1, x2)
-    Dim sxmax As Double: sxmax = Application.Max(x1, x2)
-    Dim symin As Double: symin = Application.Min(y1, y2)
-    Dim symax As Double: symax = Application.Max(y1, y2)
+    Dim sxmin As Double: sxmin = MinD(x1, x2)
+    Dim sxmax As Double: sxmax = MaxD(x1, x2)
+    Dim symin As Double: symin = MinD(y1, y2)
+    Dim symax As Double: symax = MaxD(y1, y2)
     If Not (sxmax < selMin(0) Or sxmin > selMax(0) Or symax < selMin(1) Or symin > selMax(1)) Then
         SegmentIntersectsBox = True
     Else
@@ -306,7 +400,7 @@ Private Function PointInBox(x As Double, y As Double, selMin As Variant, selMax 
     PointInBox = (x >= selMin(0) And x <= selMax(0) And y >= selMin(1) And y <= selMax(1))
 End Function
 
-' 线段-线段相交（线段端点或内部），返回 Array(x,y) 或 Empty
+' 段段相交
 Private Function SegmentSegmentIntersection(x1 As Double, y1 As Double, x2 As Double, y2 As Double, _
                                             x3 As Double, y3 As Double, x4 As Double, y4 As Double) As Variant
     On Error Resume Next
@@ -329,7 +423,7 @@ Private Function SegmentSegmentIntersection(x1 As Double, y1 As Double, x2 As Do
     End If
 End Function
 
-' 在集合 pts 中添加唯一点（按 tol 判断相等）
+' 唯一点
 Private Sub AddUniquePoint(pts As Collection, x As Double, y As Double, tol As Double)
     Dim i As Long
     For i = 1 To pts.Count
@@ -338,7 +432,7 @@ Private Sub AddUniquePoint(pts As Collection, x As Double, y As Double, tol As D
     pts.Add Array(CDbl(x), CDbl(y))
 End Sub
 
-' 判断某点是否存在于 pts（按 tol）
+' 点存在
 Private Function PointExists(pts As Collection, x As Double, y As Double, tol As Double) As Boolean
     Dim i As Long
     For i = 1 To pts.Count
@@ -350,15 +444,13 @@ Private Function PointExists(pts As Collection, x As Double, y As Double, tol As
     PointExists = False
 End Function
 
-' 从点集合中取得唯一并排序的 X 或 Y 数组
-' idx = 0 -> X, idx =1 -> Y
-' asc True -> 升序, False -> 降序
+' 唯一坐标排序
 Private Function UniqueSortedCoordsFromPoints(pts As Collection, idx As Integer, tol As Double, asc As Boolean) As Variant
     Dim tmp() As Double
     Dim n As Long: n = 0
     Dim i As Long, j As Long
     For i = 1 To pts.Count
-        Dim v As Double: v = pts(i)(idx)
+        Dim v As Double: v = CDbl(pts(i)(idx))
         Dim found As Boolean: found = False
         For j = 0 To n - 1
             If Abs(tmp(j) - v) <= tol Then found = True: Exit For
@@ -370,7 +462,6 @@ Private Function UniqueSortedCoordsFromPoints(pts As Collection, idx As Integer,
         End If
     Next i
     If n = 0 Then UniqueSortedCoordsFromPoints = Array(): Exit Function
-    ' 排序
     Dim a As Long, b As Long, t As Double
     For a = 0 To n - 2
         For b = a + 1 To n - 1
@@ -382,7 +473,7 @@ Private Function UniqueSortedCoordsFromPoints(pts As Collection, idx As Integer,
     UniqueSortedCoordsFromPoints = tmp
 End Function
 
-' 安全判断对象是否有属性
+' 有属性判断
 Private Function HasProperty(o As Object, propName As String) As Boolean
     On Error Resume Next
     Dim tmp As Variant
@@ -394,4 +485,103 @@ Private Function HasProperty(o As Object, propName As String) As Boolean
         Err.Clear
     End If
     On Error GoTo 0
+End Function
+
+' 数值最小/最大
+Private Function MinD(a As Double, b As Double) As Double
+    If a < b Then MinD = a Else MinD = b
+End Function
+
+Private Function MaxD(a As Double, b As Double) As Double
+    If a > b Then MaxD = a Else MaxD = b
+End Function
+
+' ---------- 文字收集与归属辅助 ----------
+
+' 是否为普通文字实体（Text/MText）
+Private Function IsPlainTextEntity(o As Object) As Boolean
+    On Error Resume Next
+    If o Is Nothing Then Exit Function
+    Dim tn As String: tn = TypeName(o)
+    IsPlainTextEntity = (InStr(1, tn, "Text", vbTextCompare) > 0 Or _
+                         InStr(1, tn, "MText", vbTextCompare) > 0)
+End Function
+
+' 获取文字插入点与内容（兼容 Text/MText）
+' 返回：Array(x, y, content) 或 Empty
+Private Function GetTextInfo(o As Object) As Variant
+    On Error Resume Next
+    If o Is Nothing Then GetTextInfo = Empty: Exit Function
+
+    Dim tn As String: tn = TypeName(o)
+    Dim p As Variant, txt As String
+
+    If InStr(1, tn, "MText", vbTextCompare) > 0 Then
+        If HasProperty(o, "InsertionPoint") And HasProperty(o, "TextString") Then
+            p = o.InsertionPoint
+            txt = CStr(o.TextString)
+            GetTextInfo = Array(CDbl(p(0)), CDbl(p(1)), txt)
+            Exit Function
+        End If
+    End If
+
+    If InStr(1, tn, "Text", vbTextCompare) > 0 Then
+        ' 普通单行文字
+        If HasProperty(o, "InsertionPoint") And HasProperty(o, "TextString") Then
+            p = o.InsertionPoint
+            txt = CStr(o.TextString)
+            GetTextInfo = Array(CDbl(p(0)), CDbl(p(1)), txt)
+            Exit Function
+        End If
+        ' 某些实现用 AlignmentPoint 作为插入点依据
+        If HasProperty(o, "AlignmentPoint") And HasProperty(o, "TextString") Then
+            p = o.AlignmentPoint
+            txt = CStr(o.TextString)
+            GetTextInfo = Array(CDbl(p(0)), CDbl(p(1)), txt)
+            Exit Function
+        End If
+    End If
+
+    GetTextInfo = Empty
+End Function
+
+' 在 bbox 内收集普通文字（Text/MText）
+' 返回：Collection，每项为 Array(x, y, content)
+Private Function CollectTextsInBox(ms As Object, selMin As Variant, selMax As Variant) As Collection
+    Dim res As Collection: Set res = New Collection
+    Dim e As Object
+    For Each e In ms
+        If IsPlainTextEntity(e) Then
+            Dim info As Variant
+            info = GetTextInfo(e)
+            If Not IsEmpty(info) Then
+                If PointInBox(info(0), info(1), selMin, selMax) Then
+                    res.Add info
+                End If
+            End If
+        End If
+    Next e
+    Set CollectTextsInBox = res
+End Function
+
+' 单元格矩形数据结构构造
+' 返回：Array(XL, XR, YB, YT, r1, c1, r2, c2)
+Private Function MakeCellRect(XL As Double, XR As Double, YB As Double, YT As Double, _
+                              r1 As Long, c1 As Long, r2 As Long, c2 As Long) As Variant
+    MakeCellRect = Array(XL, XR, YB, YT, r1, c1, r2, c2)
+End Function
+
+' 查找包含点的单元格矩形（用EPS容差）
+' 命中返回该矩形（含Excel范围），否则返回 Empty
+Private Function FindContainingCell(cellRects As Collection, x As Double, y As Double, tol As Double) As Variant
+    Dim i As Long
+    For i = 1 To cellRects.Count
+        Dim r As Variant: r = cellRects(i)
+        If (x >= r(0) - tol And x <= r(1) + tol And _
+            y >= r(2) - tol And y <= r(3) + tol) Then
+            FindContainingCell = r
+            Exit Function
+        End If
+    Next i
+    FindContainingCell = Empty
 End Function
