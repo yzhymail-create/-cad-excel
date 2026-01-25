@@ -1,4 +1,13 @@
 ' -cad-excel
+' ================================================================
+' 参考项目（汽车线束/线束图相关 CAD 二次开发）
+' - https://github.com/lukebikes/OpenWiringHarness (线束 CAD 方向探索)
+' - https://github.com/twisted-builds-llc/KiCad_Automotive_Diagram-Schematic_Symbols (汽车线束原理图符号库)
+' - https://github.com/JonHylands/fxos-battery-harness (Eagle CAD 线束设计文件示例)
+' - https://github.com/haplokuon/netDxf (DXF 读写库，可用于线束图自动化)
+' - https://github.com/luanshixia/AutoCADCodePack (AutoCAD .NET 二次开发辅助库)
+' - https://github.com/lysjq/AutoCAD-ObjectArx (ObjectARX 二次开发参考)
+' - https://github.com/LibreCAD/LibreCAD (2D CAD 开源基础项目)
 Option Explicit
 
 ' ================================================================
