@@ -1,13 +1,17 @@
 ' -cad-excel
 ' ================================================================
-' 参考项目（汽车线束/线束图相关 CAD 二次开发）
-' - https://github.com/lukebikes/OpenWiringHarness (线束 CAD 方向探索)
-' - https://github.com/twisted-builds-llc/KiCad_Automotive_Diagram-Schematic_Symbols (汽车线束原理图符号库)
-' - https://github.com/JonHylands/fxos-battery-harness (Eagle CAD 线束设计文件示例)
-' - https://github.com/haplokuon/netDxf (DXF 读写库，可用于线束图自动化)
-' - https://github.com/luanshixia/AutoCADCodePack (AutoCAD .NET 二次开发辅助库)
-' - https://github.com/lysjq/AutoCAD-ObjectArx (ObjectARX 二次开发参考)
-' - https://github.com/LibreCAD/LibreCAD (2D CAD 开源基础项目)
+' 参考项目（汽车线束/线束图相关 CAD 二次开发）/ Reference projects
+' - https://github.com/lukebikes/OpenWiringHarness (线束 CAD 方向探索 / Wiring harness CAD exploration)
+' - https://github.com/lukebikes/HarnessHelper (线束设计辅助工具 / Harness design helper)
+' - https://github.com/wireviz/WireViz (线束文档与线缆说明工具 / Wiring harness documentation and cable specification tool)
+' - https://github.com/wireviz/wireviz-web (WireViz Web 包装 / WireViz web wrapper)
+' - https://github.com/twisted-builds-llc/KiCad_Automotive_Diagram-Schematic_Symbols (汽车线束原理图符号库 / Automotive harness schematic symbols)
+' - https://github.com/chithrinesh/EV-wiring-harness (线束原理图示例 / Harness schematic example)
+' - https://github.com/JonHylands/fxos-battery-harness (Eagle CAD 线束设计文件示例 / Eagle CAD harness design example)
+' - https://github.com/haplokuon/netDxf (DXF 读写库，可用于线束图自动化 / DXF read/write library for harness diagram automation)
+' - https://github.com/luanshixia/AutoCADCodePack (AutoCAD .NET 二次开发辅助库 / AutoCAD .NET development toolkit)
+' - https://github.com/lysjq/AutoCAD-ObjectArx (ObjectARX 二次开发参考 / ObjectARX development reference)
+' - https://github.com/LibreCAD/LibreCAD (2D CAD 开源基础项目 / Open-source 2D CAD base)
 Option Explicit
 
 ' ================================================================
