@@ -17,7 +17,13 @@ def extract_text(path: Path) -> str:
         return _extract_docx(path)
     if suffix == ".xlsx":
         return _extract_xlsx(path)
-    if suffix in {".pptx", ".ppt"}:
+    if suffix == ".ppt":
+        logger.warning(
+            "Legacy .ppt format detected (%s). File will be skipped; convert to .pptx using PowerPoint or LibreOffice.",
+            path,
+        )
+        return ""
+    if suffix == ".pptx":
         return _extract_pptx(path)
     if suffix in {".png", ".jpg", ".jpeg", ".tiff", ".bmp"}:
         return _extract_image(path)
@@ -45,7 +51,11 @@ def _extract_xlsx(path: Path) -> str:
     parts: list[str] = []
     for sheet in workbook.worksheets:
         for row in sheet.iter_rows(values_only=True):
-            values = [str(cell) for cell in row if cell not in (None, "")]
+            values = [
+                str(cell).strip()
+                for cell in row
+                if cell is not None and str(cell).strip()
+            ]
             if values:
                 parts.append(" ".join(values))
     workbook.close()
@@ -53,9 +63,6 @@ def _extract_xlsx(path: Path) -> str:
 
 
 def _extract_pptx(path: Path) -> str:
-    if path.suffix.lower() == ".ppt":
-        logger.warning("Legacy .ppt detected (%s). Please convert to .pptx.", path)
-        return ""
     from pptx import Presentation
 
     presentation = Presentation(str(path))

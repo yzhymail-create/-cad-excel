@@ -38,7 +38,7 @@ python -m local_semantic_file_agent index --root /path/to/docs --root /path/to/m
 python -m local_semantic_file_agent search --query "工艺规范" --top-k 5
 ```
 
-默认数据库路径：`~/.local_semantic_agent/index.sqlite`（可通过 `--db` 覆盖）。
+默认数据库路径：`~/.local_semantic_file_agent/index.sqlite`（可通过 `--db` 覆盖）。
 
 ## 支持的文件类型
 

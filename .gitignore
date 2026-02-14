@@ -1,5 +1,5 @@
 __pycache__/
 *.pyc
-.local_semantic_agent/
+.local_semantic_file_agent/
 *.sqlite
 *.db

@@ -8,8 +8,10 @@ import numpy as np
 
 class EmbeddingModel:
     def __init__(self, model_name: str) -> None:
-        self._mode = model_name.lower()
-        if self._mode == "hashing":
+        self.dimension = 0
+        self._model_name = model_name.lower()
+        self._use_hashing = self._model_name == "hashing"
+        if self._use_hashing:
             self._init_hashing()
             return
 
@@ -39,7 +41,7 @@ class EmbeddingModel:
 
     def encode(self, texts: Iterable[str]) -> np.ndarray:
         text_list = list(texts)
-        if self._mode == "hashing":
+        if self._use_hashing:
             embeddings = self._vectorizer.transform(text_list).toarray()
             return np.asarray(embeddings, dtype=np.float32)
         embeddings = self._model.encode(

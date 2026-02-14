@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import logging
 import sqlite3
 from pathlib import Path
 from typing import Iterable
 
 import numpy as np
+
+
+logger = logging.getLogger(__name__)
 
 
 class LocalVectorStore:
@@ -56,17 +60,19 @@ class LocalVectorStore:
     def replace_file(
         self,
         file_path: str,
-        mtime: float,
+        modification_time: float,
         size: int,
         chunks: Iterable[str],
         embeddings: np.ndarray,
     ) -> None:
         with self._connection:
             self._connection.execute(
-                "REPLACE INTO files (file_path, mtime, size) VALUES (?, ?, ?)",
-                (file_path, mtime, size),
+                "DELETE FROM chunks WHERE file_path = ?", (file_path,)
             )
-            self._connection.execute("DELETE FROM chunks WHERE file_path = ?", (file_path,))
+            self._connection.execute(
+                "REPLACE INTO files (file_path, mtime, size) VALUES (?, ?, ?)",
+                (file_path, modification_time, size),
+            )
             rows = [
                 (
                     file_path,
@@ -95,14 +101,22 @@ class LocalVectorStore:
                     "DELETE FROM files WHERE file_path = ?", (file_path,)
                 )
 
-    def load_embeddings(self) -> tuple[list[tuple[str, str]], np.ndarray]:
+    def load_all(self) -> tuple[list[tuple[str, str]], np.ndarray]:
         cursor = self._connection.execute(
             "SELECT file_path, content, embedding, embedding_dim FROM chunks"
         )
         records: list[tuple[str, str]] = []
         vectors: list[np.ndarray] = []
         for file_path, content, embedding_blob, embedding_dim in cursor.fetchall():
-            vector = np.frombuffer(embedding_blob, dtype=np.float32, count=embedding_dim)
+            vector = np.frombuffer(embedding_blob, dtype=np.float32)
+            if vector.size != embedding_dim:
+                logger.warning(
+                    "Embedding dimension mismatch for %s (expected %s, got %s)",
+                    file_path,
+                    embedding_dim,
+                    vector.size,
+                )
+                continue
             records.append((file_path, content))
             vectors.append(vector)
         if not vectors:

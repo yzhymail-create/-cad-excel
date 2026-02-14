@@ -9,7 +9,7 @@ from .embedding import EmbeddingModel
 from .storage import LocalVectorStore
 
 
-DEFAULT_DB_PATH = Path.home() / ".local_semantic_agent" / "index.sqlite"
+DEFAULT_DB_PATH = Path.home() / ".local_semantic_file_agent" / "index.sqlite"
 DEFAULT_MODEL = "models/all-MiniLM-L6-v2"
 
 
@@ -108,14 +108,18 @@ def main() -> None:
     try:
         if args.command == "index":
             roots = [Path(root) for root in args.root]
-            stats = index_paths(
-                roots,
-                store,
-                model,
-                args.chunk_size,
-                args.chunk_overlap,
-                args.cleanup_missing,
-            )
+            try:
+                stats = index_paths(
+                    roots,
+                    store,
+                    model,
+                    args.chunk_size,
+                    args.chunk_overlap,
+                    args.cleanup_missing,
+                )
+            except ValueError as exc:
+                print(f"Error: {exc}")
+                return
             _print_index_stats(stats)
         elif args.command == "search":
             results = search_query(args.query, store, model, args.top_k)
