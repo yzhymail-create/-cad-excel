@@ -40,6 +40,39 @@ python -m local_semantic_file_agent search --query "工艺规范" --top-k 5
 
 默认数据库路径：`~/.local_semantic_file_agent/index.sqlite`（可通过 `--db` 覆盖）。
 
+## 生成 exe（可选）
+
+如需打包 Windows/Linux 可执行文件，可安装 PyInstaller：
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+生成单文件可执行程序：
+
+```bash
+pyinstaller --onefile --name local_semantic_file_agent local_semantic_file_agent/__main__.py
+```
+
+输出目录在 `dist/` 下，Windows 运行示例：
+
+```bash
+dist\local_semantic_file_agent.exe index --root D:\docs
+```
+
+Linux/macOS 运行示例：
+
+```bash
+./dist/local_semantic_file_agent index --root /data/docs
+```
+
+## 简单测试
+
+```bash
+python -m local_semantic_file_agent index --root /path/to/docs --model hashing
+python -m local_semantic_file_agent search --query "工艺规范" --top-k 5 --model hashing
+```
+
 ## 支持的文件类型
 
 - PDF
