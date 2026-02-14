@@ -3,3 +3,6 @@ __pycache__/
 .local_semantic_file_agent/
 *.sqlite
 *.db
+dist/
+build/
+*.spec

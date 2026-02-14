@@ -51,7 +51,7 @@ pip install -r requirements-dev.txt
 生成单文件可执行程序：
 
 ```bash
-pyinstaller --onefile --name local_semantic_file_agent local_semantic_file_agent/__main__.py
+pyinstaller --onefile --name local_semantic_file_agent local_semantic_file_agent/entrypoint.py
 ```
 
 输出目录在 `dist/` 下，Windows 运行示例：
