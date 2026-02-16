@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>个人账本 - UI 预览</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      background: #f7f7f5;
+      color: #1c1c1c;
+    }
+    .phone {
+      max-width: 420px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .title {
+      text-align: center;
+      font-size: 28px;
+      font-weight: 700;
+      margin: 12px 0 16px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 18px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    }
+    .balance-label {
+      font-size: 16px;
+      color: #666;
+    }
+    .balance-amount {
+      font-size: 34px;
+      font-weight: 700;
+      color: #0b7a4d;
+      margin: 6px 0;
+    }
+    .balance-hint {
+      font-size: 14px;
+      color: #888;
+    }
+    .form {
+      margin-top: 18px;
+      background: #fff;
+      border-radius: 18px;
+      padding: 16px;
+    }
+    .input {
+      border: 1px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 18px;
+      margin-bottom: 12px;
+      background: #fafafa;
+    }
+    .actions {
+      display: flex;
+      gap: 12px;
+    }
+    .button {
+      flex: 1;
+      padding: 14px 0;
+      border-radius: 12px;
+      color: #fff;
+      font-size: 20px;
+      font-weight: 600;
+      text-align: center;
+    }
+    .button.save {
+      background: #0b7a4d;
+    }
+    .button.expense {
+      background: #375a9e;
+    }
+    .list {
+      margin-top: 16px;
+      display: grid;
+      gap: 12px;
+    }
+    .row {
+      background: #fff;
+      border-radius: 16px;
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .type {
+      width: 56px;
+      font-weight: 600;
+      font-size: 18px;
+    }
+    .note {
+      flex: 1;
+    }
+    .note-title {
+      font-size: 18px;
+    }
+    .note-date {
+      font-size: 14px;
+      color: #888;
+      margin-top: 4px;
+    }
+    .amount {
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .amount.pos { color: #0b7a4d; }
+    .amount.neg { color: #c0392b; }
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <div class="title">个人账本</div>
+    <div class="card">
+      <div class="balance-label">当前余额</div>
+      <div class="balance-amount">￥2,380.00</div>
+      <div class="balance-hint">纯本地保存 · 无需联网</div>
+    </div>
+    <div class="form">
+      <div class="input">金额（元）</div>
+      <div class="input">备注（可不填）</div>
+      <div class="actions">
+        <div class="button save">存钱</div>
+        <div class="button expense">记账</div>
+      </div>
+    </div>
+    <div class="list">
+      <div class="row">
+        <div class="type">存钱</div>
+        <div class="note">
+          <div class="note-title">养老金</div>
+          <div class="note-date">2026-02-16</div>
+        </div>
+        <div class="amount pos">+￥800.00</div>
+      </div>
+      <div class="row">
+        <div class="type">记账</div>
+        <div class="note">
+          <div class="note-title">超市买菜</div>
+          <div class="note-date">2026-02-15</div>
+        </div>
+        <div class="amount neg">-￥120.00</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

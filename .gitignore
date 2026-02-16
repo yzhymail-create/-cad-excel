@@ -1,2 +1,7 @@
 personal-account-app/node_modules/
 personal-account-app/npm-debug.log*
+personal-account-app/mobile/node_modules/
+personal-account-app/mobile/.expo/
+personal-account-app/mobile/npm-debug.log*
+personal-account-app/mobile/android/
+personal-account-app/mobile/ios/

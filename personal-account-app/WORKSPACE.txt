@@ -10,3 +10,12 @@
 - config/app.settings.json: 应用基础配置（firstWeekday 目前使用 Monday/Sunday 字符串）
 - data/default-categories.json: 预置收支分类
 index.js 提供读取以上两个配置文件的异步入口函数，请保留其路径结构。
+
+移动端原型（安卓 APK）：
+- mobile/: Expo/React Native 安卓本地记账原型，适合老人极简使用。
+  - App.js: 记账/存钱主界面（纯本地保存）
+  - app.json: 应用名称与 Android 配置
+  - 构建 APK（本地）：在 mobile 目录执行
+    1) npm install
+    2) npx expo prebuild --platform android
+    3) cd android && ./gradlew assembleRelease
