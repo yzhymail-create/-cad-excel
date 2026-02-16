@@ -1,0 +1,12 @@
+{
+  "appName": "个人帐目",
+  "locale": "zh-CN",
+  "currency": "CNY",
+  "firstWeekday": "Monday",
+  "features": {
+    "accounts": true,
+    "budgets": true,
+    "reports": true,
+    "cloudSync": false
+  }
+}

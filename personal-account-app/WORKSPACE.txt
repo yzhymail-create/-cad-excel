@@ -1,0 +1,11 @@
+个人帐目手机应用工作域说明
+
+目录用途：
+- src/: 应用源码
+  - screens/: 页面（账目列表、添加记录、统计）
+  - components/: 可复用组件
+  - services/: 数据持久化/同步
+  - state/: 状态管理与缓存
+- assets/: 图标、字体、图片等资源
+- config/app.settings.json: 应用基础配置
+- data/default-categories.json: 预置收支分类
