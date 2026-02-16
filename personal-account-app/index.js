@@ -1,7 +1,22 @@
 'use strict';
 
-const appSettings = require('./config/app.settings.json');
-const defaultCategories = require('./data/default-categories.json');
+const fs = require('fs');
+const path = require('path');
+
+const loadJson = (relativePath) => {
+  const fullPath = path.join(__dirname, relativePath);
+  if (!fs.existsSync(fullPath)) {
+    throw new Error(`缺少必需配置文件: ${relativePath}`);
+  }
+  try {
+    return JSON.parse(fs.readFileSync(fullPath, 'utf8'));
+  } catch (error) {
+    throw new Error(`无法解析配置文件 ${relativePath}: ${error.message}`);
+  }
+};
+
+const appSettings = loadJson('config/app.settings.json');
+const defaultCategories = loadJson('data/default-categories.json');
 
 module.exports = {
   appSettings,
