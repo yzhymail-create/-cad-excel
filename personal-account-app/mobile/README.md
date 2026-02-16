@@ -24,6 +24,16 @@ cd android
 
 生成的 APK 位于：`android/app/build/outputs/apk/release/`。
 
+## 云构建 APK（无电脑）
+
+如果你没有电脑，可以使用 Expo EAS 云构建：
+
+1. 注册 Expo 账号：https://expo.dev/signup
+2. 在 Expo 个人设置中生成 **Access Token**
+3. 在 GitHub 仓库设置中添加 `EXPO_TOKEN` Secret
+4. 打开 GitHub Actions，手动运行 **Cloud Build Android APK** 工作流
+5. 在 EAS 构建页面下载 APK
+
 ## UI 预览
 
 仓库内提供静态预览图：`ui-preview.html`，用于确认极简布局与字体大小。

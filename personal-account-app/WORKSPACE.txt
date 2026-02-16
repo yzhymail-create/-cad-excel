@@ -19,3 +19,4 @@ index.js 提供读取以上两个配置文件的异步入口函数，请保留�
     1) npm install
     2) npx expo prebuild --platform android
     3) cd android && ./gradlew assembleRelease
+  - 构建 APK（云端）：GitHub Actions 触发 Cloud Build Android APK
