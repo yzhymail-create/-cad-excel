@@ -15,10 +15,10 @@ const loadJson = (relativePath) => {
   }
 };
 
-const appSettings = loadJson('config/app.settings.json');
-const defaultCategories = loadJson('data/default-categories.json');
+const getAppSettings = () => loadJson('config/app.settings.json');
+const getDefaultCategories = () => loadJson('data/default-categories.json');
 
 module.exports = {
-  appSettings,
-  defaultCategories,
+  getAppSettings,
+  getDefaultCategories,
 };

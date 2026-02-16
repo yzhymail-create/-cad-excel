@@ -9,4 +9,4 @@
 - assets/: 图标、字体、图片等资源
 - config/app.settings.json: 应用基础配置
 - data/default-categories.json: 预置收支分类
-index.js 默认加载以上两个配置文件，请保留其路径结构。
+index.js 提供读取以上两个配置文件的入口函数，请保留其路径结构。
