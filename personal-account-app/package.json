@@ -1,7 +1,7 @@
 {
   "name": "personal-account-app",
   "version": "1.0.0",
-  "description": "个人帐目手机应用工作域",
+  "description": "个人账目手机应用工作域",
   "private": true,
   "scripts": {
     "start": "echo \"请选择移动端框架后补充启动命令\"",
