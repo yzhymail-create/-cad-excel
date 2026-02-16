@@ -1,0 +1,13 @@
+{
+  "name": "personal-account-app",
+  "version": "1.0.0",
+  "description": "个人账目手机应用工作域",
+  "private": true,
+  "scripts": {
+    "start": "echo \"请选择移动端框架后补充启动命令\"",
+    "test": "echo \"暂未配置测试\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
