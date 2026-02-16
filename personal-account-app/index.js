@@ -6,7 +6,7 @@ const path = require('path');
 const loadJson = (relativePath) => {
   const fullPath = path.join(__dirname, relativePath);
   if (!fs.existsSync(fullPath)) {
-    throw new Error(`缺少必需配置文件: ${relativePath}`);
+    throw new Error(`缺少必需的配置文件: ${relativePath}`);
   }
   try {
     return JSON.parse(fs.readFileSync(fullPath, 'utf8'));
