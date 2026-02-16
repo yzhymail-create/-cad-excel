@@ -3,6 +3,9 @@ name: Cloud Build Android APK
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build-android-apk:
     runs-on: ubuntu-latest
