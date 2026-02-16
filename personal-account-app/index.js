@@ -11,19 +11,23 @@ const loadJson = async (relativePath) => {
   }
 
   const fullPath = path.join(__dirname, relativePath);
-  const loadPromise = fs
-    .readFile(fullPath, 'utf8')
-    .then((contents) => JSON.parse(contents))
-    .catch((error) => {
-      cache.delete(relativePath);
-      if (error.code === 'ENOENT') {
-        throw new Error(`缺少必需的配置文件: ${relativePath}`);
-      }
-      throw new Error(`无法解析配置文件 ${relativePath}: ${error.message}`);
-    });
+  let contents;
+  try {
+    contents = await fs.readFile(fullPath, 'utf8');
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      throw new Error(`缺少必需的配置文件: ${relativePath}`);
+    }
+    throw new Error(`无法读取配置文件 ${relativePath}: ${error.message}`);
+  }
 
-  cache.set(relativePath, loadPromise);
-  return loadPromise;
+  try {
+    const parsed = JSON.parse(contents);
+    cache.set(relativePath, parsed);
+    return parsed;
+  } catch (error) {
+    throw new Error(`配置文件 ${relativePath} JSON 格式错误: ${error.message}`);
+  }
 };
 
 const getAppSettings = async () => loadJson('config/app.settings.json');
